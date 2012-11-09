@@ -15,7 +15,7 @@ $(function(){
   };
 
   // Nick names that are reservied for other users.
-  var busyNames = {};
+  var names = {};
 
   // Get server configuration.
   $.get('config', function(config) {
@@ -48,7 +48,7 @@ $(function(){
 
     // Validate the nick name is valid according to local state.
     var validateNick = function(name) {
-      return name && (!busyNames[name]);
+      return name && (!names[name]);
     };
 
     // Validate current input.
@@ -106,13 +106,13 @@ $(function(){
     // Change in server state of participants. Some nick names might be blocked now.
     // Update local state to reduce chances of collision.
     socket.on('update', function(participants) {
-      busyNames = participants;
+      names = participants;
       validateInput();
     });
 
     // Server connected and sent start request, indicating current chat participants.
     socket.on('start', function(participants) {
-      busyNames = participants;
+      names = participants;
       // Hide "connecting..." message and ask for a nick from the user.
       connecting.hide();
       input.show();
