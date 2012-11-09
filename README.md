@@ -1,4 +1,4 @@
-hydepark
+Hyde Park
 ========
 
-hydepark chat application
+Hyde Park Chat
