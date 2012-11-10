@@ -3,6 +3,14 @@
   height: 340px;
 }
 
-.chatcontent {
+.chatitem {
   word-wrap: break-word;
+}
+
+.chatentry {
+  border-style: solid; 
+  border-color: rgba(82, 168, 236, 0.8); 
+  border-radius: 7px; 
+  border-width: 1px;
+  margin-bottom: 2px;
 }
