@@ -10,8 +10,12 @@ $(function(){
   
   // Append message author and message text
   var appendMessage = function(author, message) {
-    $('<div>').addClass('span4').text(message).prependTo(content);
-    $('<div>').addClass('span2').text(author).prependTo(content);
+    var entry = $('<div>').addClass('span6');
+    var row = $('<div>').addClass('row');
+    $('<div>').addClass('span4').text(message).prependTo(row);
+    $('<div>').addClass('span2').text(author).prependTo(row);
+    row.prependTo(entry);
+    entry.prependTo(content);
   };
 
   // Nick names that are reservied for other users.
