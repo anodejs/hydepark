@@ -15,7 +15,11 @@
   margin-bottom: 2px;
 }
 
-.outer {
+.mainscreen {
+  margin: 10px;
+}
+
+.mainframe {
   border-style: solid; 
   border-color: rgba(82, 168, 236, 0.8); 
   border-radius: 10px; 
