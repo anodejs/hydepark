@@ -1,6 +1,6 @@
 .scrollable { 
   overflow-y: auto; 
-  height: 340px;
+  height: 360px;
 }
 
 .chatitem {
@@ -13,4 +13,12 @@
   border-radius: 4px; 
   border-width: 1px;
   margin-bottom: 2px;
+}
+
+.outer {
+  border-style: solid; 
+  border-color: rgba(82, 168, 236, 0.8); 
+  border-radius: 10px; 
+  border-width: 2px; 
+  padding: 10px;
 }
