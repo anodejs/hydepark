@@ -12,8 +12,8 @@ $(function(){
   var appendMessage = function(author, message) {
     var entry = $('<div>').addClass('span6');
     var row = $('<div>').addClass('row');
-    $('<div>').addClass('span4').text(message).prependTo(row);
-    $('<div>').addClass('span2').text(author).prependTo(row);
+    $('<div>').addClass('span4 chatcontent').text(message).prependTo(row);
+    $('<div>').addClass('span2 chatcontent').text(author).prependTo(row);
     row.prependTo(entry);
     entry.prependTo(content);
   };
