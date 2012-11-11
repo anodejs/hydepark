@@ -23,8 +23,12 @@ $(function(){
     entry.show('fast');
   };
 
+  var nickToId = function(nick) {
+    return encodeURIComponent(nick).replace(/%/g, '-');
+  }
+
   var addParticipant = function(nick) {
-    var entry = $('<div>').addClass('chatentry').attr('id', nick);
+    var entry = $('<div>').addClass('chatentry').attr('id', nickToId(nick));
     var row = $('<div>').addClass('row');
     $('<div>').addClass('span2 chatitem').text(nick).prependTo(row);
     row.prependTo(entry);
@@ -33,7 +37,7 @@ $(function(){
   }
 
   var removeParticipant = function(nick) {
-    $('#' + nick).remove();
+    $('#' + nickToId(nick)).remove();
   }
 
   // Nick names that are reservied for other users.
@@ -63,15 +67,23 @@ $(function(){
       // Send the chosen nick name to the server.
       socket.emit('authenticate', nick);
     };
+
+    var nickDisplayName = function(nick, peer) {
+      var displayName = nick;
+      if (peer && peer !== 'me') {
+        displayName = peer + ':' + nick;
+      }
+      return displayName;
+    };
     
     // Message from another user.
     socket.on('message', function (data) {
-      appendMessage(data.nick, data.text);
+      appendMessage(nickDisplayName(data.nick, data.peer), data.text);
     });
 
     // Validate the nick name is valid according to local state.
     var validateNick = function(name) {
-      return name && (!names[name]) && (!(/^(\d+):/.test(name)));
+      return name && (!names.me[name]) && (!(/^(\d+):/.test(name)));
     };
 
     // Validate current input.
@@ -111,7 +123,7 @@ $(function(){
             // If this is message, send it and display locally.
             input.val('');
             appendMessage(nick, text);
-            socket.emit('message', { text: text});
+            socket.emit('message', { text: text });
           }
           break;
         default:
@@ -126,26 +138,24 @@ $(function(){
       nick = name;
     });
 
-    socket.on('added', function(name) {
-      addParticipant(name);
-    });
-
-    socket.on('removed', function(name) {
-      removeParticipant(name);
-    });
-
-    // Change in server state of participants. Some nick names might be blocked now.
-    // Update local state to reduce chances of collision.
-    socket.on('update', function(participants) {
-      names = participants;
+    socket.on('added', function(name, peer) {
+      names[peer][name] = 1;
+      addParticipant(nickDisplayName(name, peer));
       validateInput();
+    });
+
+    socket.on('removed', function(name, peer) {
+      removeParticipant(nickDisplayName(name, peer));
+      delete names[peer][name];
     });
 
     // Server connected and sent start request, indicating current chat participants.
     socket.on('start', function(nicks) {
       names = nicks;
-      Object.keys(nicks).forEach(function(nick){
-        addParticipant(nick);
+      Object.keys(names).forEach(function(peer){
+        Object.keys(names[peer]).forEach(function(nick) {
+          addParticipant(nickDisplayName(nick, peer));
+        });
       });
       // Hide "connecting..." message and ask for a nick from the user.
       connecting.hide();
@@ -166,6 +176,7 @@ $(function(){
       participantspane.hide();
       participants.empty();
       connecting.show();
+      names = {};
       nick = null;
     });
   });
