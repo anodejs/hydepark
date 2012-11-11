@@ -10,8 +10,9 @@ $(function(){
   
   // Append message author and message text
   var appendMessage = function(author, message) {
-    var entry = $('<div>').addClass('span7 chatentry');
+    var entry = $('<div>').addClass('chatentry');
     var row = $('<div>').addClass('row');
+    $('<div>').addClass('span2 chatitem').text($.format.date(new Date(), 'MMM dd HH:mm:ss')).prependTo(row);
     $('<div>').addClass('span4 chatitem').text(message).prependTo(row);
     $('<div>').addClass('span2 chatitem').text(author).prependTo(row);
     row.prependTo(entry);
