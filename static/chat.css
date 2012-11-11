@@ -25,11 +25,15 @@
   margin: 10px;
 }
 
-.mainframe {
+.pane {
   border-style: solid; 
   border-color: rgba(82, 168, 236, 0.8); 
   border-radius: 10px; 
   border-width: 2px; 
   padding: 10px;
   background-color: rgba(82, 168, 236, 0.3);
+}
+
+.inputreplacement {
+  height: 50px;
 }

@@ -88,6 +88,10 @@ ioclients.on('connection', function(socket) {
     // Notify all clients on new name added, to reduce chances of name
     // collision race.
     ioclients.emit('update', participants);
+    socket.broadcast.emit('added', name);
+    Object.keys(peers).forEach(function(peerName) {
+      peers[peerName].emit('added', name);
+    });
     // On message from client.
     socket.on('message', function (data) {
       // The client nick name is in the scope.
@@ -105,13 +109,21 @@ ioclients.on('connection', function(socket) {
       // It is not vital to allow reusing name immediately.
       console.info('client disconnected:', name);
       delete participants[name];
+      socket.broadcast.emit('removed', name);
+      Object.keys(peers).forEach(function(peerName) {
+        peers[peerName].emit('removed', name);
+      });
     });
   });
 });
 
+var peerNickName = function(peer, nick) {
+  return peer + ':' + nick;
+};
+
 // Peer ANODE instances connections
 io.of('/peers').on('connection', function(socket) {
-  socket.on('authenticate', function(name) {
+  socket.on('authenticate', function(name, participants) {
     // Other instance identifies itself with instance name.
     console.info('peer inbound connected:', name);
     // 15 sec later check if there is outbound connection to the peer and
@@ -123,9 +135,23 @@ io.of('/peers').on('connection', function(socket) {
     // Upon message from peer server.
     socket.on('message', function (data) {
       // Prepend peer server name to the client nick name.
-      data.nick = name + ':' + data.nick;
+      data.nick = peerNickName(name, data.nick);
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
+    });
+    socket.on('added', function(nick) {
+      ioclients.emit('added', peerNickName(name, nick));
+    });
+    socket.on('removed', function(nick) {
+      ioclients.emit('removed', peerNickName(name, nick));
+    });
+    socket.on('disconnect', function() {
+      Object.keys(participants).forEach(function(nick) {
+        ioclients.emit('removed', peerNickName(name, nick));
+      });
+    });
+    Object.keys(participants).forEach(function(nick) {
+      ioclients.emit('added', peerNickName(name, nick));
     });
   });
 });
@@ -168,7 +194,7 @@ var connectToPeer = function(instance) {
     console.info('outbound connected to peer:', peerName);
     peers[peerName] = socket;
     // Let the peer to know this instance name.
-    socket.emit('authenticate', serverName);
+    socket.emit('authenticate', serverName, participants);
   });
   socket.on('disconnect', function() {
     console.info('peer disconnected:', peerName);

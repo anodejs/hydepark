@@ -3,10 +3,13 @@ $(function(){
   var inputgroup = $('#inputgroup');
   var content = $('#content');
   var connecting = $('#connecting');
+  var participantspane =$('#participantspane');
+  var participants = $('#participants');
 
   // hide content until name is chosen
   content.hide();
   input.hide();
+  participantspane.hide();
   
   // Append message author and message text
   var appendMessage = function(author, message) {
@@ -19,6 +22,19 @@ $(function(){
     entry.prependTo(content);
     entry.show('fast');
   };
+
+  var addParticipant = function(nick) {
+    var entry = $('<div>').addClass('chatentry').attr('id', nick);
+    var row = $('<div>').addClass('row');
+    $('<div>').addClass('span2 chatitem').text(nick).prependTo(row);
+    row.prependTo(entry);
+    entry.prependTo(participants);
+    entry.show('fast');
+  }
+
+  var removeParticipant = function(nick) {
+    $('#' + nick).remove();
+  }
 
   // Nick names that are reservied for other users.
   var names = {};
@@ -41,6 +57,7 @@ $(function(){
     var setNick = function() {
       // Now the content can be used.
       content.show();
+      participantspane.show();
       input.val('');
       input.attr('placeholder', 'Type your message');
       // Send the chosen nick name to the server.
@@ -54,7 +71,7 @@ $(function(){
 
     // Validate the nick name is valid according to local state.
     var validateNick = function(name) {
-      return name && (!names[name]);
+      return name && (!names[name]) && (!(/^(\d+):/.test(name)));
     };
 
     // Validate current input.
@@ -109,6 +126,14 @@ $(function(){
       nick = name;
     });
 
+    socket.on('added', function(name) {
+      addParticipant(name);
+    });
+
+    socket.on('removed', function(name) {
+      removeParticipant(name);
+    });
+
     // Change in server state of participants. Some nick names might be blocked now.
     // Update local state to reduce chances of collision.
     socket.on('update', function(participants) {
@@ -117,8 +142,11 @@ $(function(){
     });
 
     // Server connected and sent start request, indicating current chat participants.
-    socket.on('start', function(participants) {
-      names = participants;
+    socket.on('start', function(nicks) {
+      names = nicks;
+      Object.keys(nicks).forEach(function(nick){
+        addParticipant(nick);
+      });
       // Hide "connecting..." message and ask for a nick from the user.
       connecting.hide();
       input.show();
@@ -135,6 +163,8 @@ $(function(){
     socket.on('disconnect', function() {
       content.hide();
       input.hide();
+      participantspane.hide();
+      participants.empty();
       connecting.show();
       nick = null;
     });
