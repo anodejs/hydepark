@@ -17,6 +17,7 @@ $(function(){
     $('<div>').addClass('span2 chatitem').text(author).prependTo(row);
     row.prependTo(entry);
     entry.prependTo(content);
+    entry.show('fast');
   };
 
   // Nick names that are reservied for other users.
