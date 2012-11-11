@@ -23,21 +23,23 @@ $(function(){
     entry.show('fast');
   };
 
-  var nickToId = function(nick) {
-    return encodeURIComponent(nick).replace(/%/g, '-');
-  }
+  var participantsDisplayed = {};
 
   var addParticipant = function(nick) {
-    var entry = $('<div>').addClass('chatentry').attr('id', nickToId(nick));
+    var entry = $('<div>').addClass('chatentry');
     var row = $('<div>').addClass('row');
     $('<div>').addClass('span2 chatitem').text(nick).prependTo(row);
     row.prependTo(entry);
     entry.prependTo(participants);
     entry.show('fast');
+    participantsDisplayed[nick] = entry;
   }
 
   var removeParticipant = function(nick) {
-    $('#' + nickToId(nick)).remove();
+    var entry = participantsDisplayed[nick];
+    if (entry) {
+      entry.remove();
+    }
   }
 
   // Nick names that are reservied for other users.
