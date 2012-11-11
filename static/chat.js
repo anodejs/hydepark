@@ -139,6 +139,7 @@ $(function(){
     });
 
     socket.on('added', function(name, peer) {
+      names[peer] = names[peer] || {};
       names[peer][name] = 1;
       addParticipant(nickDisplayName(name, peer));
       validateInput();
