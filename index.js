@@ -1,4 +1,5 @@
 var express = require('express');
+var http = require('http');
 var path = require('path');
 var urlParser = require('url');
 
@@ -7,9 +8,10 @@ var rebus = process.env.ANODE_APP && anode && anode.rebus;
 var topology = rebus && rebus.value.topology;
 var appConfig = rebus && rebus.value.apps && process.env.ANODE_APP && rebus.value.apps[process.env.ANODE_APP];
 
-var srv = express.createServer();
+var srv = express();
+var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
-srv.listen(port);
+server.listen(port);
 
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
@@ -50,7 +52,7 @@ srv.get('/config/?', function(req, res) {
 
 srv.use(express.static(path.join(__dirname, "static")));
 
-var io = require('socket.io').listen(srv);
+var io = require('socket.io').listen(server);
 
 // Peer ANODE instances.
 var peers = {};
