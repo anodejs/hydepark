@@ -50,7 +50,7 @@ $(function(){
     config = config || { url: '/' };
     
     // Meanwhile, this is the only transport working with ANODE
-    var options = { transports: ['xhr-polling'] };
+    var options = { transports: ['websocket'] /*transports: ['xhr-polling']*/ };
     // If non-default socket.io resouce, use it.
     if (config.resource) {
       options.resource = config.resource;
