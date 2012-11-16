@@ -185,8 +185,7 @@ var connectToPeer = function(instance) {
   ep.pathname = '/peers';
   var url = urlParser.format(ep);
   console.info('outbound connecting to peer:', peerName);
-  // Use polling transport that so far is the one that works with ANODE.
-  var options = { transports: ['xhr-polling'], resource: ioSocketResource };
+  var options = { resource: ioSocketResource };
   var socket = ioClient.connect(url, options);
   // Keep socket associated with the peer.
   socket.on('connect', function() {
