@@ -1,3 +1,3 @@
 {
-  "logging" : { "level" : "log" }
+  "logging" : { "level" : "info" }
 }
