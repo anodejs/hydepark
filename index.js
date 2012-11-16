@@ -149,6 +149,10 @@ io.of('/peers').on('connection', function(socket) {
     socket.on('error', function(err) {
       console.info('------------error', err);
     });
+    participants[name] = peerNicks;
+    Object.keys(peerNicks).forEach(function(nick) {
+      ioclients.emit('added', nick, name);
+    });
   });
 });
 
@@ -196,8 +200,8 @@ var connectToPeer = function(instance) {
     if (participants[peerName]) {
       Object.keys(participants[peerName]).forEach(function(nick) {
         ioclients.emit('removed', nick, peerName);
+        delete participants[peerName][nick];
       });
-      delete participants[peerName];
     }
     // Indicate there is no outbound connection to this peer.
     delete peers[peerName];
