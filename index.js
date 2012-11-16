@@ -146,9 +146,6 @@ io.of('/peers').on('connection', function(socket) {
     socket.on('disconnect', function() {
       console.info('peer inbound disconnected:', name);
     });
-    socket.on('error', function(err) {
-      console.info('------------error', err);
-    });
     participants[name] = peerNicks;
     Object.keys(peerNicks).forEach(function(nick) {
       ioclients.emit('added', nick, name);
@@ -192,7 +189,7 @@ var connectToPeer = function(instance) {
   socket.on('connect', function() {
     console.info('outbound connected to peer:', peerName);
     if (peers[peerName]) {
-      console.warn('there is another outbound connected to peer:', peerName);
+      console.warn('there is another outbound connected to the peer:', peerName);
       peers[peerName].close();
     }
     peers[peerName] = socket;
@@ -201,14 +198,19 @@ var connectToPeer = function(instance) {
   });
   socket.on('disconnect', function() {
     console.info('peer outbound disconnected:', peerName);
-    if (participants[peerName]) {
+    // Inbound socket does not receive any event upon some disconnections, hence remove nicks on
+    // disconnect from outbound socket.
+    if (participants[peerName] === socket) {
       Object.keys(participants[peerName]).forEach(function(nick) {
         ioclients.emit('removed', nick, peerName);
         delete participants[peerName][nick];
       });
+      // Indicate there is no outbound connection to this peer.
+      delete peers[peerName];
     }
-    // Indicate there is no outbound connection to this peer.
-    delete peers[peerName];
+    else {
+      console.warn('the disconnected socket is obsolete from:', peerName);
+    }
   });
 };
 
