@@ -49,8 +49,7 @@ $(function(){
   $.get('config', function(config) {
     config = config || { url: '/' };
     
-    // Meanwhile, this is the only transport working with ANODE
-    var options = { transports: ['xhr-polling'] };
+    var options = {};
     // If non-default socket.io resouce, use it.
     if (config.resource) {
       options.resource = config.resource;
