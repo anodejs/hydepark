@@ -191,6 +191,10 @@ var connectToPeer = function(instance) {
   // Keep socket associated with the peer.
   socket.on('connect', function() {
     console.info('outbound connected to peer:', peerName);
+    if (peers[peerName]) {
+      console.warn('there is another outbound connected to peer:', peerName);
+      peers[peerName].close();
+    }
     peers[peerName] = socket;
     // Let the peer to know this instance name.
     socket.emit('authenticate', serverName, participants.me);
