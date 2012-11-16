@@ -193,10 +193,12 @@ var connectToPeer = function(instance) {
   });
   socket.on('disconnect', function() {
     console.info('peer outbound disconnected:', peerName);
-    Object.keys(participants[peerName]).forEach(function(nick) {
-      ioclients.emit('removed', nick, peerName);
-    });
-    delete participants[peerName];
+    if (participants[peerName]) {
+      Object.keys(participants[peerName]).forEach(function(nick) {
+        ioclients.emit('removed', nick, peerName);
+      });
+      delete participants[peerName];
+    }
     // Indicate there is no outbound connection to this peer.
     delete peers[peerName];
   });
