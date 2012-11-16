@@ -150,6 +150,15 @@ io.of('/peers').on('connection', function(socket) {
       });
       delete participants[name];
     });
+    socket.on('end', function() {
+      console.info('---------------end');
+    });
+    socket.on('close', function() {
+      console.info('---------------close');
+    });
+    socket.on('data', function() {
+      console.info('---------------data');
+    });
     participants[name] = peerNicks;
     Object.keys(peerNicks).forEach(function(nick) {
       ioclients.emit('added', nick, name);
