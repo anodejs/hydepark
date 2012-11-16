@@ -1,4 +1,3 @@
 {
-  "public": true,
-  "logging" : { "level" : "info" }
+  "logging" : { "level" : "log" }
 }
