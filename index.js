@@ -145,23 +145,9 @@ io.of('/peers').on('connection', function(socket) {
     });
     socket.on('disconnect', function() {
       console.info('peer inbound disconnected:', name);
-      Object.keys(participants[name]).forEach(function(nick) {
-        ioclients.emit('removed', nick, name);
-      });
-      delete participants[name];
     });
-    socket.on('end', function() {
-      console.info('---------------end');
-    });
-    socket.on('close', function() {
-      console.info('---------------close');
-    });
-    socket.on('data', function() {
-      console.info('---------------data');
-    });
-    participants[name] = peerNicks;
-    Object.keys(peerNicks).forEach(function(nick) {
-      ioclients.emit('added', nick, name);
+    socket.on('error', function(err) {
+      console.info('------------error', err);
     });
   });
 });
@@ -207,6 +193,10 @@ var connectToPeer = function(instance) {
   });
   socket.on('disconnect', function() {
     console.info('peer outbound disconnected:', peerName);
+    Object.keys(participants[peerName]).forEach(function(nick) {
+      ioclients.emit('removed', nick, peerName);
+    });
+    delete participants[peerName];
     // Indicate there is no outbound connection to this peer.
     delete peers[peerName];
   });
