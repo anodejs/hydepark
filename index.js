@@ -188,10 +188,6 @@ var connectToPeer = function(instance) {
   // Keep socket associated with the peer.
   socket.on('connect', function() {
     console.info('outbound connected to peer:', peerName);
-    if (peers[peerName]) {
-      console.warn('there is another outbound connected to the peer:', peerName);
-      peers[peerName].close();
-    }
     peers[peerName] = socket;
     // Let the peer to know this instance name.
     socket.emit('authenticate', serverName, participants.me);
@@ -200,7 +196,7 @@ var connectToPeer = function(instance) {
     console.info('peer outbound disconnected:', peerName);
     // Inbound socket does not receive any event upon some disconnections, hence remove nicks on
     // disconnect from outbound socket.
-    if (participants[peerName] === socket) {
+    if (peers[peerName] === socket) {
       Object.keys(participants[peerName]).forEach(function(nick) {
         ioclients.emit('removed', nick, peerName);
         delete participants[peerName][nick];
