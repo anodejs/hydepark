@@ -124,6 +124,13 @@ io.of('/peers').on('connection', function(socket) {
   socket.on('authenticate', function(name, nicks) {
     // Other instance identifies itself with instance name.
     console.info('peer inbound connected:', name);
+    participants[name] = nicks;
+    ioclients.emit('peerconnected', name, nicks);
+    if (inboundPeers[name] && (inboundPeers[name] === socket)) {
+      console.warn('peer authenticate from the same socket', name);
+      return;
+    }
+    inboundPeers[name] = socket;
     // Upon message from peer server.
     socket.on('message', function (data) {
       data.peer = name;
@@ -152,9 +159,6 @@ io.of('/peers').on('connection', function(socket) {
         console.warn('no participants for peer:', name);
       }
     });
-    participants[name] = nicks; 
-    inboundPeers[name] = socket;
-    ioclients.emit('peerconnected', name, nicks);
   });
 });
 
