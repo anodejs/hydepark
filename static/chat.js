@@ -151,13 +151,35 @@ $(function(){
       delete names[peer][name];
     });
 
+    var removePeer = function(peer) {
+      if (names[peer]) {
+        Object.keys(names[peer]).forEach(function(nick) {
+          removeParticipant(nickDisplayName(nick, peer));
+        });
+        delete names[peer];
+      }
+    };
+
+    var addPeer = function(peer, nicks) {
+      removePeer(peer);
+      names[peer] = nicks;
+      Object.keys(nicks).forEach(function(nick) {
+        addParticipant(nickDisplayName(nick, peer));
+      });
+    };
+
+    socket.on('peerconnected', function(peer, nicks) {
+      addPeer(peer, nicks);
+    });
+
+    socket.on('peerdisconnected', function(peer) {
+      removePeer(peer);
+    });
+
     // Server connected and sent start request, indicating current chat participants.
     socket.on('start', function(nicks) {
-      names = nicks;
-      Object.keys(names).forEach(function(peer){
-        Object.keys(names[peer]).forEach(function(nick) {
-          addParticipant(nickDisplayName(nick, peer));
-        });
+      Object.keys(nicks).forEach(function(peer) {
+        addPeer(peer, nicks[peer]);
       });
       // Hide "connecting..." message and ask for a nick from the user.
       connecting.hide();
