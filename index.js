@@ -195,7 +195,8 @@ if (rebus) {
       var options = { 
         resource: ioSocketResource,
         'max reconnection attempts': Infinity,
-        'reconnection limit': 120000
+        'reconnection limit': 120000,
+        'reconnection delay' : 6000
       };
       var socket = ioClient.connect(url, options);
       peers[peerName] = socket;
