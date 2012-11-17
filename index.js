@@ -259,6 +259,13 @@ if (rebus) {
     Object.keys(topology.hosts).forEach(function(instance) {
       // Connect if address was changed.
       connectToPeer({instance: instance, topology: topology, update: true});
-    }); 
+    });
+    Object.keys(peers).forEach(function(peer) {
+      var instance = 'anodejsrole_IN_' + peer;
+      if (!topology.hosts[instance]) {
+        peers[peer].socket.disconnect();
+        delete peers[peer];
+      }
+    });
   });
 }
