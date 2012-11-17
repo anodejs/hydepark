@@ -208,8 +208,6 @@ if (rebus) {
       });
       socket.on('reconnect', function() {
         console.info('peer outbound reconnected:', peerName);
-        // Let the peer to know this instance name.
-        socket.emit('authenticate', serverName, participants.me);
       });
       socket.on('disconnect', function() {
         console.info('peer outbound disconnected:', peerName);
