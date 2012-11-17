@@ -153,7 +153,9 @@ $(function(){
 
     var removePeer = function(peer) {
       if (names[peer]) {
+        console.info('peer remove:', names[peer]);
         Object.keys(names[peer]).forEach(function(nick) {
+          console.info('nick remove:', nick, peer);
           removeParticipant(nickDisplayName(nick, peer));
         });
         delete names[peer];
@@ -173,6 +175,7 @@ $(function(){
     });
 
     socket.on('peerdisconneted', function(peer) {
+      console.info('peer disconnected:', peer);
       removePeer(peer);
     });
 

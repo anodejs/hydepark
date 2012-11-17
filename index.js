@@ -142,7 +142,7 @@ io.of('/peers').on('connection', function(socket) {
       console.info('peer inbound disconnected:', name);
       if (participants[name]) {
         if (inboundPeers[name] && (inboundPeers[name] === socket)) {
-          ioclients.emit('peerconnected', name);
+          ioclients.emit('peerdisconnected', name);
         }
         else {
           console.warn('disconnect came from different socket for peer:', name);
