@@ -126,6 +126,8 @@ io.of('/peers').on('connection', function(socket) {
     console.info('peer inbound connected:', name);
     participants[name] = nicks;
     ioclients.emit('peerconnected', name, nicks);
+    // Check if there is no outbound connection to the peer and establish if missing.
+    connectToPeer('anodejsrole_IN_' + name);
     if (inboundPeers[name] && (inboundPeers[name] === socket)) {
       console.warn('peer authenticate from the same socket', name);
       return;
@@ -152,7 +154,7 @@ io.of('/peers').on('connection', function(socket) {
           console.info('peer inbound disconnected:', name);
         }
         else {
-          console.warn('disconnect came from different socket for peer:', name);
+          console.info('disconnect came from different socket for peer:', name);
         }
       }
       else {
@@ -174,60 +176,68 @@ var instanceName = function (instanceId) {
 // Current instance name.
 var serverName = instanceName(instanceId);
 
-if (rebus) {
-  rebus.subscribe('topology', function (topology) {
-    if (!topology || !topology.hosts) {
-      console.error('invalid topology');
-      return;
+var connectToPeer = function(instance) {
+  if (instance === instanceId) {
+    return;
+  }
+  var peerName = instanceName(instance);
+  if (peers[peerName]) {
+    console.info('already has outbound connection to peer:', peerName);
+    return;
+  }
+  var connectTimeout = setTimeout(function() {
+    console.warn('10 minutes passed and still no connection to peer, retrying');
+    delete peers[peerName];
+    connectToPeer(instance);
+  }, 600000);
+  var ep = {};
+  ep.protocol = internalEp.protocol;
+  ep.hostname = topology.hosts[instance].addr;
+  ep.port = internalEp.port;
+  ep.pathname = '/peers';
+  var url = urlParser.format(ep);
+  console.info('init outbound connection to peer:', peerName);
+  var options = { 
+    resource: ioSocketResource,
+    'max reconnection attempts': Infinity,
+    'reconnection limit': 120000,
+    'reconnection delay' : 6000,
+    transports: ['websocket'],
+    'try multiple transports': false
+  };
+  var socket = ioClient.connect(url, options);
+  peers[peerName] = socket;
+  // Keep socket associated with the peer.
+  socket.on('connect', function() {
+    console.info('peer outbound connected:', peerName);
+    // Let the peer to know this instance name.
+    socket.emit('authenticate', serverName, participants.me);
+    if (connectTimeout) {
+      clearTimeout(connectTimeout);
+      connectTimeout = null;
     }
-    Object.keys(topology.hosts).forEach(function(instance) {
-      if (instance === instanceId) {
-        return;
-      }
-      var peerName = instanceName(instance);
-      if (peers[peerName]) {
-        console.info('already has outbound connection to peer:', peerName);
-        return;
-      }
-      var ep = {};
-      ep.protocol = internalEp.protocol;
-      ep.hostname = topology.hosts[instance].addr;
-      ep.port = internalEp.port;
-      ep.pathname = '/peers';
-      var url = urlParser.format(ep);
-      console.info('init outbound connection to peer:', peerName);
-      var options = { 
-        resource: ioSocketResource,
-        'max reconnection attempts': Infinity,
-        'reconnection limit': 120000,
-        'reconnection delay' : 6000
-      };
-      var socket = ioClient.connect(url, options);
-      peers[peerName] = socket;
-      // Keep socket associated with the peer.
-      socket.on('connect', function() {
-        console.info('peer outbound connected:', peerName);
-        // Let the peer to know this instance name.
-        socket.emit('authenticate', serverName, participants.me);
-      });
-      socket.on('reconnect', function() {
-        console.info('peer outbound reconnected:', peerName);
-      });
-      socket.on('disconnect', function() {
-        console.info('peer outbound disconnected:', peerName);
-      });
-      socket.on('reconnecting', function() {
-        console.info('peer outbound reconnecting:', peerName);
-      });
-      socket.on('connecting', function() {
-        console.info('peer outbound connecting:', peerName);
-      });
-      socket.on('reconnect_failed', function() {
-        console.error('peer reconnnect failed:', peerName);
-      });
-      socket.on('connect_failed', function() {
-        console.error('peer connnect failed:', peerName);
-      });
-    });
   });
+  socket.on('reconnect', function() {
+    console.info('peer outbound reconnected:', peerName);
+  });
+  socket.on('disconnect', function() {
+    console.info('peer outbound disconnected:', peerName);
+  });
+  socket.on('reconnecting', function() {
+    console.info('peer outbound reconnecting:', peerName);
+  });
+  socket.on('connecting', function() {
+    console.info('peer outbound connecting:', peerName);
+  });
+  socket.on('reconnect_failed', function() {
+    console.error('peer reconnnect failed:', peerName);
+  });
+  socket.on('connect_failed', function() {
+    console.error('peer connnect failed:', peerName);
+  });
+};
+
+// On start connect to all the peers that can be seen now.
+if (topology && topology.hosts) {
+  Object.keys(topology.hosts).forEach(connectToPeer);
 }
