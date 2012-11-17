@@ -127,7 +127,7 @@ io.of('/peers').on('connection', function(socket) {
     participants[name] = nicks;
     ioclients.emit('peerconnected', name, nicks);
     // Check if there is no outbound connection to the peer and establish if missing.
-    connectToPeer('anodejsrole_IN_' + name);
+    connectToPeer({instance: 'anodejsrole_IN_' + name});
     if (inboundPeers[name] && (inboundPeers[name] === socket)) {
       console.warn('peer authenticate from the same socket', name);
       return;
@@ -176,18 +176,19 @@ var instanceName = function (instanceId) {
 // Current instance name.
 var serverName = instanceName(instanceId);
 
-var connectToPeer = function(instance, topology) {
+var connectToPeer = function(options) {
+  var instance = options.instance;
   if (instance === instanceId) {
     return;
   }
   var peerName = instanceName(instance);
-  if (topology) {
+  if (options.update) {
     if (!peers[peerName]) {
       console.info('no need to connect to the new instance unitl it calls back');
       return;
     }
   }
-  topology = topology || rebus.value.topology;
+  var topology = options.topology || rebus.value.topology;
   if (peers[peerName] && (peers[peerName].addr === topology.hosts[instance].addr)) {
     console.info('already has outbound connection to peer:', peerName);
     return;
@@ -248,14 +249,16 @@ var connectToPeer = function(instance, topology) {
 
 if (topology) {
   // Initial connect
-  Object.keys(topology.hosts).forEach(connectToPeer);
+  Object.keys(topology.hosts).forEach(function(instance) {
+    connectToPeer({instance: instance, topology: topology});
+  });
 }
 
 if (rebus) {
   rebus.subscribe('topology', function(topology) {
     Object.keys(topology.hosts).forEach(function(instance) {
       // Connect if address was changed.
-      connectToPeer(instance, topology);
+      connectToPeer({instance: instance, topology: topology, update: true});
     }); 
   });
 }
