@@ -56,6 +56,7 @@ var io = require('socket.io').listen(server);
 
 // Peer ANODE instances.
 var peers = {};
+var inboundPeers = {};
 
 // Clients connect to clients namespace.
 var ioclients = io.of('/clients');
@@ -130,17 +131,17 @@ io.of('/peers').on('connection', function(socket) {
       ioclients.emit('message', data);
     });
     socket.on('added', function(nick) {
-      participants[name].nicks[nick] = 1;
+      participants[name][nick] = 1;
       ioclients.emit('added', nick, name);
     });
     socket.on('removed', function(nick) {
       ioclients.emit('removed', nick, name);
-      delete participants[name].nicks[nick];
+      delete participants[name][nick];
     });
     socket.on('disconnect', function() {
       console.info('peer inbound disconnected:', name);
       if (participants[name]) {
-        if (participants[name].socket === socket) {
+        if (inboundPeers[name] && (inboundPeers[name] === socket)) {
           ioclients.emit('peerconnected', name);
         }
         else {
@@ -151,7 +152,8 @@ io.of('/peers').on('connection', function(socket) {
         console.warn('no participants for peer:', name);
       }
     });
-    participants[name] = { nicks: nicks, socket: socket };
+    participants[name] = nicks; 
+    inboundPeers[name] = socket;
     ioclients.emit('peerconnected', name, nicks);
   });
 });
