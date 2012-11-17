@@ -192,7 +192,7 @@ var connectToPeer = function(instance) {
   }, 600000);
   var ep = {};
   ep.protocol = internalEp.protocol;
-  // Has to take new topology
+  // Has to take new topology.
   ep.hostname = rebus.value.topology.hosts[instance].addr;
   ep.port = internalEp.port;
   ep.pathname = '/peers';
