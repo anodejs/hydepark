@@ -123,12 +123,6 @@ io.of('/peers').on('connection', function(socket) {
   socket.on('authenticate', function(name, peerNicks) {
     // Other instance identifies itself with instance name.
     console.info('peer inbound connected:', name);
-    // 15 sec later check if there is outbound connection to the peer and
-    // establish if not.
-    setTimeout(function() {
-      console.info('check outbound connection to', name);
-      connectToPeer('anodejsrole_IN_' + name);
-    }, 15000);
     // Upon message from peer server.
     socket.on('message', function (data) {
       data.peer = name;
@@ -145,6 +139,12 @@ io.of('/peers').on('connection', function(socket) {
     });
     socket.on('disconnect', function() {
       console.info('peer inbound disconnected:', name);
+      if (participants[name]) {
+        Object.keys(participants[name]).forEach(function(nick) {
+          ioclients.emit('removed', nick, name);
+          delete participants[name][nick];
+        });
+      }
     });
     participants[name] = peerNicks;
     Object.keys(peerNicks).forEach(function(nick) {
@@ -169,10 +169,6 @@ var serverName = instanceName(instanceId);
 // Connect to peer instance.
 var connectToPeer = function(instance) {
   var peerName = instanceName(instance);
-  if (peers[peerName]) {
-    console.info('already has connection to the peer:', peerName);
-    return;
-  }
   var ep = {};
   // Topology might be changed, hence get the latest.
   var instances = rebus.value.topology.hosts;
@@ -182,33 +178,18 @@ var connectToPeer = function(instance) {
   ep.port = internalEp.port;
   ep.pathname = '/peers';
   var url = urlParser.format(ep);
-  console.info('outbound connecting to peer:', peerName);
+  console.info('init outbound connection to peer:', peerName);
   var options = { resource: ioSocketResource };
   var socket = ioClient.connect(url, options);
+  peers[peerName] = socket;
   // Keep socket associated with the peer.
   socket.on('connect', function() {
-    console.info('outbound connected to peer:', peerName);
-    peers[peerName] = socket;
+    console.info('peer outbound connected:', peerName);
     // Let the peer to know this instance name.
     socket.emit('authenticate', serverName, participants.me);
   });
   socket.on('disconnect', function() {
     console.info('peer outbound disconnected:', peerName);
-    // Inbound socket does not receive any event upon some disconnections, hence remove nicks on
-    // disconnect from outbound socket.
-    if (peers[peerName] === socket) {
-      if (participants[peerName]) {
-        Object.keys(participants[peerName]).forEach(function(nick) {
-          ioclients.emit('removed', nick, peerName);
-          delete participants[peerName][nick];
-        });
-      }
-      // Indicate there is no outbound connection to this peer.
-      delete peers[peerName];
-    }
-    else {
-      console.warn('the disconnected socket is obsolete from:', peerName);
-    }
   });
 };
 
