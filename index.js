@@ -264,6 +264,7 @@ if (rebus) {
       var instance = 'anodejsrole_IN_' + peer;
       if (!topology.hosts[instance]) {
         peers[peer].socket.disconnect();
+        peers[peer].socket.options['max reconnection attempts'] = 1;
         delete peers[peer];
       }
     });
