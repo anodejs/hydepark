@@ -256,6 +256,10 @@ if (topology) {
 
 if (rebus) {
   rebus.subscribe('topology', function(topology) {
+    if (!topology) {
+      console.error('emtpty topology notification');
+      return;
+    }
     Object.keys(topology.hosts).forEach(function(instance) {
       // Connect if address was changed.
       connectToPeer({instance: instance, topology: topology, update: true});
@@ -264,7 +268,6 @@ if (rebus) {
       var instance = 'anodejsrole_IN_' + peer;
       if (!topology.hosts[instance]) {
         peers[peer].socket.disconnect();
-        peers[peer].socket.options['max reconnection attempts'] = 1;
         delete peers[peer];
       }
     });
