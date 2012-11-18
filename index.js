@@ -1,4 +1,5 @@
 var express = require('express');
+var http = require('http');
 var path = require('path');
 var urlParser = require('url');
 
@@ -7,9 +8,10 @@ var rebus = process.env.ANODE_APP && anode && anode.rebus;
 var topology = rebus && rebus.value.topology;
 var appConfig = rebus && rebus.value.apps && process.env.ANODE_APP && rebus.value.apps[process.env.ANODE_APP];
 
-var srv = express.createServer();
+var srv = express();
+var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
-srv.listen(port);
+server.listen(port);
 
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
@@ -50,10 +52,11 @@ srv.get('/config/?', function(req, res) {
 
 srv.use(express.static(path.join(__dirname, "static")));
 
-var io = require('socket.io').listen(srv);
+var io = require('socket.io').listen(server);
 
 // Peer ANODE instances.
 var peers = {};
+var inboundPeers = {};
 
 // Clients connect to clients namespace.
 var ioclients = io.of('/clients');
@@ -89,7 +92,7 @@ ioclients.on('connection', function(socket) {
     // collision race.
     socket.broadcast.emit('added', name, 'me');
     Object.keys(peers).forEach(function(peerName) {
-      peers[peerName].emit('added', name);
+      peers[peerName].socket.emit('added', name);
     });
     // On message from client.
     socket.on('message', function (data) {
@@ -100,7 +103,7 @@ ioclients.on('connection', function(socket) {
       // If there are peer ANODE instances, send the message to all 
       // servers.
       Object.keys(peers).forEach(function(peerName) {
-        peers[peerName].emit('message', data);
+        peers[peerName].socket.emit('message', data);
       });
     });
     socket.on('disconnect', function() {
@@ -110,7 +113,7 @@ ioclients.on('connection', function(socket) {
       delete participants.me[name];
       socket.broadcast.emit('removed', name, 'me');
       Object.keys(peers).forEach(function(peerName) {
-        peers[peerName].emit('removed', name);
+        peers[peerName].socket.emit('removed', name);
       });
     });
   });
@@ -118,15 +121,18 @@ ioclients.on('connection', function(socket) {
 
 // Peer ANODE instances connections
 io.of('/peers').on('connection', function(socket) {
-  socket.on('authenticate', function(name, peerNicks) {
+  socket.on('authenticate', function(name, nicks) {
     // Other instance identifies itself with instance name.
     console.info('peer inbound connected:', name);
-    // 15 sec later check if there is outbound connection to the peer and
-    // establish if not.
-    setTimeout(function() {
-      console.info('check outbound connection to', name);
-      connectToPeer('anodejsrole_IN_' + name);
-    }, 15000);
+    participants[name] = nicks;
+    ioclients.emit('peerconnected', name, nicks);
+    // Check if there is no outbound connection to the peer and establish if missing.
+    connectToPeer({instance: 'anodejsrole_IN_' + name});
+    if (inboundPeers[name] && (inboundPeers[name] === socket)) {
+      console.warn('peer authenticate from the same socket', name);
+      return;
+    }
+    inboundPeers[name] = socket;
     // Upon message from peer server.
     socket.on('message', function (data) {
       data.peer = name;
@@ -142,18 +148,22 @@ io.of('/peers').on('connection', function(socket) {
       delete participants[name][nick];
     });
     socket.on('disconnect', function() {
-      Object.keys(participants[name]).forEach(function(nick) {
-        ioclients.emit('removed', nick, name);
-      });
-    });
-    participants[name] = peerNicks;
-    Object.keys(peerNicks).forEach(function(nick) {
-      ioclients.emit('added', nick, name);
+      if (participants[name]) {
+        if (inboundPeers[name] && (inboundPeers[name] === socket)) {
+          ioclients.emit('peerdisconnected', name);
+          console.info('peer inbound disconnected:', name);
+        }
+        else {
+          console.info('disconnect came from different socket for peer:', name);
+        }
+      }
+      else {
+        console.warn('no participants for peer:', name);
+      }
     });
   });
 });
 
-var instances = (topology && topology.hosts) || {};
 var ioClient = require('socket.io-client');
 
 // Obtain instnace name out of ANODE instance ID. It is the instance serial
@@ -166,43 +176,107 @@ var instanceName = function (instanceId) {
 // Current instance name.
 var serverName = instanceName(instanceId);
 
-// Connect to peer instance.
-var connectToPeer = function(instance) {
-  var peerName = instanceName(instance);
-  if (peers[peerName]) {
-    console.info('already has connection to the peer:', peerName);
+var connectToPeer = function(options) {
+  var instance = options.instance;
+  if (instance === instanceId) {
     return;
   }
+  var peerName = instanceName(instance);
+  if (options.update) {
+    if (!peers[peerName]) {
+      console.info('no need to connect to the new instance unitl it calls back');
+      return;
+    }
+  }
+  var topology = options.topology || rebus.value.topology;
+  if (peers[peerName] && (peers[peerName].addr === topology.hosts[instance].addr)) {
+    console.info('already has outbound connection to peer:', peerName);
+    return;
+  }
+  peers[peerName] = { addr: topology.hosts[instance].addr };
+  var connectTimeout = setTimeout(function() {
+    console.warn('10 minutes passed and still no connection to peer, retrying');
+    delete peers[peerName];
+    connectToPeer(instance);
+  }, 600000);
   var ep = {};
-  // Topology might be changed, hence get the latest.
-  var instances = rebus.value.topology.hosts;
-  // Use internal endpoint and specific IP address.
   ep.protocol = internalEp.protocol;
-  ep.hostname = instances[instance].addr;
+  // Has to take new topology.
+  ep.hostname = rebus.value.topology.hosts[instance].addr;
   ep.port = internalEp.port;
   ep.pathname = '/peers';
   var url = urlParser.format(ep);
-  console.info('outbound connecting to peer:', peerName);
-  // Use polling transport that so far is the one that works with ANODE.
-  var options = { transports: ['xhr-polling'], resource: ioSocketResource };
+  console.info('init outbound connection to peer:', peerName);
+  var options = { 
+    resource: ioSocketResource,
+    'max reconnection attempts': Infinity,
+    'reconnection limit': 120000,
+    'reconnection delay' : 6000,
+    transports: ['websocket'],
+    'try multiple transports': false
+  };
   var socket = ioClient.connect(url, options);
+  peers[peerName].socket = socket;
   // Keep socket associated with the peer.
   socket.on('connect', function() {
-    console.info('outbound connected to peer:', peerName);
-    peers[peerName] = socket;
+    console.info('peer outbound connected:', peerName);
     // Let the peer to know this instance name.
     socket.emit('authenticate', serverName, participants.me);
+    if (connectTimeout) {
+      clearTimeout(connectTimeout);
+      connectTimeout = null;
+    }
+  });
+  socket.on('reconnect', function() {
+    console.info('peer outbound reconnected:', peerName);
   });
   socket.on('disconnect', function() {
-    console.info('peer disconnected:', peerName);
-    // Indicate there is no outbound connection to this peer.
-    delete peers[peerName];
+    console.info('peer outbound disconnected:', peerName);
+  });
+  socket.on('reconnecting', function() {
+    console.info('peer outbound reconnecting:', peerName);
+  });
+  socket.on('connecting', function() {
+    console.info('peer outbound connecting:', peerName);
+  });
+  socket.on('reconnect_failed', function() {
+    console.error('peer reconnnect failed:', peerName);
+  });
+  socket.on('connect_failed', function() {
+    console.error('peer connnect failed:', peerName);
   });
 };
 
-// Go over all peers and connect to them.
-Object.keys(instances).forEach(function(instance) {
-  if (instance !== instanceId) {
-    connectToPeer(instance);
-  }
-});
+if (topology) {
+  // Initial connect
+  Object.keys(topology.hosts).forEach(function(instance) {
+    connectToPeer({instance: instance, topology: topology});
+  });
+}
+
+if (rebus) {
+  rebus.subscribe('topology', function(topology) {
+    if (!topology) {
+      console.error('emtpty topology notification');
+      return;
+    }
+    Object.keys(topology.hosts).forEach(function(instance) {
+      // Connect if address was changed.
+      connectToPeer({instance: instance, topology: topology, update: true});
+    });
+    Object.keys(peers).forEach(function(peer) {
+      var instance = 'anodejsrole_IN_' + peer;
+      if (!topology.hosts[instance]) {
+        peers[peer].socket.disconnect();
+        if (peers[peer].socket.socket && peers[peer].socket.socket.options) {
+          console.info('reconnections reset for:', peer);
+          peers[peer].socket.socket.options['max reconnection attempts'] = 1;
+        }
+        else {
+          console.warn('cannot reset reconnections for:', peer);
+        }
+        delete peers[peer];
+      }
+    });
+  });
+}
