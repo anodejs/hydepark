@@ -21,7 +21,7 @@ if (appPath && appPath[0] === '/') {
   appPath = appPath.slice(1);
 }
 
-var instanceId = topology && rebus.value.topology.instanceId;
+var instanceId = topology && topology.instanceId;
 var ioSocketResource = appPath + '/socket.io';
 
 srv.use(express.bodyParser());
@@ -176,6 +176,18 @@ var instanceName = function (instanceId) {
 // Current instance name.
 var serverName = instanceName(instanceId);
 
+var disconnectFromPeer = function(peer) {
+  peers[peer].socket.disconnect();
+  if (peers[peer].socket.socket && peers[peer].socket.socket.options) {
+    console.info('reconnections reset for:', peer);
+    peers[peer].socket.socket.options['max reconnection attempts'] = 1;
+  }
+  else {
+    console.warn('cannot reset reconnections for:', peer);
+  }
+  delete peers[peer];
+};
+
 var connectToPeer = function(options) {
   var instance = options.instance;
   if (instance === instanceId) {
@@ -193,11 +205,14 @@ var connectToPeer = function(options) {
     console.info('already has outbound connection to peer:', peerName);
     return;
   }
+  if (peers[peerName] && peers[peerName].socket) {
+    disconnectFromPeer(peerName);
+  }
   peers[peerName] = { addr: topology.hosts[instance].addr };
   var connectTimeout = setTimeout(function() {
-    console.warn('10 minutes passed and still no connection to peer, retrying');
+    console.warn('10 minutes passed and still no connection to peer, retrying:', peerName);
     delete peers[peerName];
-    connectToPeer(instance);
+    connectToPeer({ instance: instance });
   }, 600000);
   var ep = {};
   ep.protocol = internalEp.protocol;
@@ -267,15 +282,7 @@ if (rebus) {
     Object.keys(peers).forEach(function(peer) {
       var instance = 'anodejsrole_IN_' + peer;
       if (!topology.hosts[instance]) {
-        peers[peer].socket.disconnect();
-        if (peers[peer].socket.socket && peers[peer].socket.socket.options) {
-          console.info('reconnections reset for:', peer);
-          peers[peer].socket.socket.options['max reconnection attempts'] = 1;
-        }
-        else {
-          console.warn('cannot reset reconnections for:', peer);
-        }
-        delete peers[peer];
+        disconnectFromPeer(peer);
       }
     });
   });
