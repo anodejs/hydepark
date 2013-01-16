@@ -109,7 +109,7 @@ ioclients.on('connection', function(socket) {
         peers[peerName].socket.emit('message', data);
       });
 
-      if (/#stats/.test(data)) {
+      if (/#stats/.test(data.text)) {
         console.info('stats is requested');
         socket.emit('message', { nick: 'robot', peer: 'local', text: 'stats: ' + mcount + ' messages served'});
       }
