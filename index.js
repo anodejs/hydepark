@@ -110,7 +110,7 @@ ioclients.on('connection', function(socket) {
       });
 
       if (/#stats/.test(data.text)) {
-        console.info('stats is requested');
+        console.info('stats is requested by %s', name);
         socket.emit('message', { nick: 'robot', peer: 'local', text: 'stats: ' + mcount + ' messages served'});
       }
     });
