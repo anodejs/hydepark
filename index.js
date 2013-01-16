@@ -110,7 +110,8 @@ ioclients.on('connection', function(socket) {
       });
 
       if (/#stats/.test(data)) {
-        socket.emit('message', 'stats: ' + mcount + ' messages served');
+        console.info('stats is requested');
+        socket.emit('message', { nick: 'robot', peer: 'local', text: 'stats: ' + mcount + ' messages served'});
       }
     });
     socket.on('disconnect', function() {
