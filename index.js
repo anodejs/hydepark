@@ -83,6 +83,10 @@ ioclients.on('connection', function(socket) {
   // Upon suggested user nick name.
   socket.on('authenticate', function(name) {
     console.info('client connected:', name);
+    if (name.length <= 1) {
+      console.warn('client with short name %s connected', name);
+      name = '--' + name + '--';
+    }
     // Resolve unique name from proposed one. Usually would be the same.
     name = obtainUniqueName(name);
     console.info('confirmed name:', name);
