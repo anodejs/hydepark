@@ -24,8 +24,6 @@ if (appPath && appPath[0] === '/') {
 var instanceId = topology && topology.instanceId;
 var ioSocketResource = appPath + '/socket.io';
 
-var mcounter = 0;
-
 srv.use(express.bodyParser());
 
 // Redirect root to index.html
@@ -100,7 +98,6 @@ ioclients.on('connection', function(socket) {
     socket.on('message', function (data) {
       // The client nick name is in the scope.
       data.nick = name;
-      mcounter++;
       // Broacast message to all the clients.
       socket.broadcast.emit('message', data);
       // If there are peer ANODE instances, send the message to all 
@@ -108,11 +105,6 @@ ioclients.on('connection', function(socket) {
       Object.keys(peers).forEach(function(peerName) {
         peers[peerName].socket.emit('message', data);
       });
-
-      if (/#stat/.test(data.text)) {
-        console.info('statistics requested');
-        socket.emit('message',  {text: 'statistics: ' + mcounter + ' messages', nick: 'robot', peer: 'local'});
-      }
     });
     socket.on('disconnect', function() {
       // Remove nick name from the catalog. No need to notify clients.
@@ -144,7 +136,6 @@ io.of('/peers').on('connection', function(socket) {
     // Upon message from peer server.
     socket.on('message', function (data) {
       data.peer = name;
-      mcounter++;
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
     });
