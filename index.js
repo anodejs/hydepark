@@ -111,7 +111,7 @@ ioclients.on('connection', function(socket) {
 
       if (/#stat/.test(data.text)) {
         console.info('statistics requested');
-        socket.emit('message', 'statistics: ' + mcounter + ' messages');
+        socket.emit('message',  {text: 'statistics: ' + mcounter + ' messages', nick: 'robot', peer: 'local'});
       }
     });
     socket.on('disconnect', function() {
