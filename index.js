@@ -24,8 +24,6 @@ if (appPath && appPath[0] === '/') {
 var instanceId = topology && topology.instanceId;
 var ioSocketResource = appPath + '/socket.io';
 
-var mcount = 0;
-
 srv.use(express.bodyParser());
 
 // Redirect root to index.html
@@ -107,13 +105,6 @@ ioclients.on('connection', function(socket) {
       Object.keys(peers).forEach(function(peerName) {
         peers[peerName].socket.emit('message', data);
       });
-
-      mcount++;
-
-      if (/#stats/.test(data.text)) {
-        socket.emit('message', { text: 'number of messages: ' + mcount, nick: 'system', peer: 'local'});
-      }
-
     });
     socket.on('disconnect', function() {
       // Remove nick name from the catalog. No need to notify clients.
@@ -147,7 +138,6 @@ io.of('/peers').on('connection', function(socket) {
       data.peer = name;
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
-      mcount++;
     });
     socket.on('added', function(nick) {
       participants[name][nick] = 1;
