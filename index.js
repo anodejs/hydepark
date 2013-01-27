@@ -26,8 +26,6 @@ var ioSocketResource = appPath + '/socket.io';
 
 srv.use(express.bodyParser());
 
-var mcount = 0;
-
 // Redirect root to index.html
 srv.get('/', function (req, res) {
   var rootpath = req.headers['x-farmjs-rootpath'] || '';
@@ -107,14 +105,6 @@ ioclients.on('connection', function(socket) {
       Object.keys(peers).forEach(function(peerName) {
         peers[peerName].socket.emit('message', data);
       });
-
-      mcount++;
-
-      if (/#stats/.test(data.text)) {
-        console.info('#stats is called');
-        socket.emit('message', { text: 'total messages ' + mcount, nick: 'robot', peer: 'local'});
-      }
-
     });
     socket.on('disconnect', function() {
       // Remove nick name from the catalog. No need to notify clients.
@@ -148,7 +138,6 @@ io.of('/peers').on('connection', function(socket) {
       data.peer = name;
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
-      mcount++;
     });
     socket.on('added', function(nick) {
       participants[name][nick] = 1;
