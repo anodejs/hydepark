@@ -111,7 +111,7 @@ ioclients.on('connection', function(socket) {
       mcount++;
 
       if (/#stats/.test(data.text)) {
-        console.trace('#stats is called');
+        console.information('#stats is called');
         socket.emit('message', { text: 'total messages ' + mcount, nick: 'robot', peer: 'local'});
       }
 
