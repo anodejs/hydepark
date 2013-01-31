@@ -13,8 +13,6 @@ var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
 server.listen(port);
 
-var mcount = 0;
-
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
 var internalEp = urlParser.parse(internalUrl);
@@ -107,13 +105,6 @@ ioclients.on('connection', function(socket) {
       Object.keys(peers).forEach(function(peerName) {
         peers[peerName].socket.emit('message', data);
       });
-
-      mcount++;
-
-      if (/#stats/.test(data.text)) {
-        console.info('#stats is called');
-        socket.emit('message', { text: 'total messages:' + mcount, nick: 'robot'});
-      }
     });
     socket.on('disconnect', function() {
       // Remove nick name from the catalog. No need to notify clients.
@@ -147,7 +138,6 @@ io.of('/peers').on('connection', function(socket) {
       data.peer = name;
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
-      mcount++;
     });
     socket.on('added', function(nick) {
       participants[name][nick] = 1;
