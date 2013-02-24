@@ -106,7 +106,7 @@ ioclients.on('connection', function(socket) {
       if (/#stat/.test(data.text)) {
         console.information('#stat is called');
         return socket.emit('message', { text: 'total messages: ' + mcount, nick: 'robot'});
-      });
+      }
 
       // Broacast message to all the clients.
       socket.broadcast.emit('message', data);
