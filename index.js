@@ -13,7 +13,7 @@ var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
 server.listen(port);
 
-var mcount;
+var mcount = 0;
 
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
