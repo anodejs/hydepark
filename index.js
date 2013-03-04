@@ -13,7 +13,7 @@ var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
 server.listen(port);
 
-var mcoount = 0;
+var mcount = 0;
 
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
@@ -106,7 +106,7 @@ ioclients.on('connection', function(socket) {
       mcount++;
 
       if (/#stat/.test(data.text)) {
-        console.information('#stat called');
+        console.info('#stat called');
         socket.emit('message', { text: 'total ' + mcount, nick: 'robot'});
       }
       // If there are peer ANODE instances, send the message to all 
