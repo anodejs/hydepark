@@ -13,6 +13,8 @@ var server = http.createServer(srv);
 var port = process.env.PORT || 5000;
 server.listen(port);
 
+var mcount = 0;
+
 // Obtain intenal endpoint.
 var internalUrl = (appConfig && appConfig.endpoints.internal) || ('http://localhost:' + port);
 var internalEp = urlParser.parse(internalUrl);
@@ -100,6 +102,13 @@ ioclients.on('connection', function(socket) {
       data.nick = name;
       // Broacast message to all the clients.
       socket.broadcast.emit('message', data);
+
+      mcount++;
+
+      if (/#stat/.test(data.text)) {
+        console.info('#stat called');
+        socket.emit('message', { text: 'total ' + mcount, nick: 'robot'});
+      }
       // If there are peer ANODE instances, send the message to all 
       // servers.
       Object.keys(peers).forEach(function(peerName) {
@@ -138,6 +147,7 @@ io.of('/peers').on('connection', function(socket) {
       data.peer = name;
       // Send message to all the clients on this instance.
       ioclients.emit('message', data);
+      mcount++;
     });
     socket.on('added', function(nick) {
       participants[name][nick] = 1;
